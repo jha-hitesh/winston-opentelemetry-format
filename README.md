@@ -32,7 +32,7 @@ const { opentelemetryLogFormat } = require("winston-opentelemetry-format").utils
 - to run tests first install jest `npm install jest` then `jest` to run the actual tests.
 
 #### generate package-lock.json
-- `npm i --package-lock-only`
+- `npm i --package-lock-only` from container
 
 
 #### License
