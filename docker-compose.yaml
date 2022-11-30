@@ -1,0 +1,12 @@
+version: "3.4"
+services:
+  winston_optl_format_tester:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    hostname: winston_optl_format_tester
+    container_name: winston_optl_format_tester
+    platform: linux/amd64
+    volumes:
+      - .:/srv/
+    tty: true
