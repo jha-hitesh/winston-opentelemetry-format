@@ -10,7 +10,7 @@ global.logList = new Array();
 class ArrayTransport extends TransportStream {
     log(info, callback) {
         logList.push(info)
-        console.log(info)
+        console.log(JSON.stringify(info))
     }
 }
 const logger = winston.createLogger({
@@ -18,12 +18,12 @@ const logger = winston.createLogger({
     format: opentelemetryLogFormat({
         "filename": __filename,
         "useTraces": true,
-        "restrictLogAttributesTo": [
+        "restrictAttributesTo": [
             "key1", "key2", "key3"
         ],
-        "discardLogAttributesFrom": [],
-        "logMetaCharacterLimit": 100,
-        "logBodyCharacterLimit": 10,
+        "discardAttributesFrom": [],
+        "metaCharacterLimit": 100,
+        "bodyCharacterLimit": 10,
         "resourceAttributes": {
             "service.name": "app-main-server",  // mandatory key
             "service.instance.id": os.hostname()  // optional key
@@ -37,8 +37,8 @@ const logger = winston.createLogger({
 
 function basicExceptations(log) {
     expect(log.body.length).toBeWithinRange(0, 10);
-    if (log.attributes.meta){
-        expect(log.attributes.meta.length).toBeWithinRange(0, 100);
+    if (log.attributes._meta){
+        expect(log.attributes._meta.length).toBeWithinRange(0, 100);
     }
     expect(log.resource["service.name"]).toBe("app-main-server");
     expect(log.resource["service.instance.id"]).toStrictEqual(expect.anything());

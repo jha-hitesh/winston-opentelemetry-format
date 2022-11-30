@@ -17,43 +17,45 @@ class OpentelemetryLogFormatter {
         "telemetry.sdk.language": "nodejs",
         "telemetry.sdk.name": "opentelemetry",
         "telemetry.sdk.version": "1.8.0", // Todo: replace with code to fetch package version
-        "traceclue.version": "1.8.0"
     }
-    missingLogBodyMessage = "MissingLogBody"
-    logBodyTooLargeAttributeName = "log_body_too_large"
-    logBodyCharLengthAttributeName = "log_body_character_length"
+    missingBodyMessage = ""
+    bodyTooLargeAttributeName = "_body_too_large"
+    bodyCharLengthAttributeName = "_body_original_length"
 
-    logMetaAttributeName = "meta"
-    logMetaTooLargeAttributeName = "log_meta_too_large"
-    logMetaCharLengthAttributeName = "log_meta_character_length"
+    metaAttributeName = "_meta"
+    metaTooLargeAttributeName = "_meta_too_large"
+    metaCharLengthAttributeName = "_meta_original_length"
 
     constructor(config) {
         this.resourceAttributes = config.resourceAttributes || {}
+        if (!this.resourceAttributes["service.name"]){
+            throw "service.name is mandatory in resourceAttributes"
+        }
         this.resourceAttributes = Object.assign({}, this.DefaultResourceAttributes, this.resourceAttributes)
         this.useTraces = config["useTraces"]
-        this.logMetaCharacterLimit = config["logMetaCharacterLimit"]
-        this.logBodyCharacterLimit = config["logBodyCharacterLimit"]
-        if (!this.logMetaCharacterLimit){
-            this.logMetaCharacterLimit = 1000
+        this.metaCharacterLimit = config["metaCharacterLimit"]
+        this.bodyCharacterLimit = config["bodyCharacterLimit"]
+        if (!this.metaCharacterLimit){
+            this.metaCharacterLimit = 1000
         }
-        if (!this.logBodyCharacterLimit){
-            this.logBodyCharacterLimit = 500
+        if (!this.bodyCharacterLimit){
+            this.bodyCharacterLimit = 500
         }
 
-        this.restrictLogAttributesTo = new Set()
-        this.restrictLogAttributesTo.add(this.logBodyTooLargeAttributeName)
-        this.restrictLogAttributesTo.add(this.logBodyCharLengthAttributeName)
-        this.restrictLogAttributesTo.add(this.logMetaTooLargeAttributeName)
-        this.restrictLogAttributesTo.add(this.logMetaCharLengthAttributeName)
+        this.restrictAttributesTo = new Set()
+        this.restrictAttributesTo.add(this.bodyTooLargeAttributeName)
+        this.restrictAttributesTo.add(this.bodyCharLengthAttributeName)
+        this.restrictAttributesTo.add(this.metaTooLargeAttributeName)
+        this.restrictAttributesTo.add(this.metaCharLengthAttributeName)
 
         this.GetAttributes = this.getAttributesSimple
-        if (config.restrictLogAttributesTo.length != 0){
+        if (config.restrictAttributesTo.length != 0){
             this.GetAttributes = this.getAttributesStructured
-            this.restrictLogAttributesTo = new Set([...this.restrictLogAttributesTo, ...config.restrictLogAttributesTo])
+            this.restrictAttributesTo = new Set([...this.restrictAttributesTo, ...config.restrictAttributesTo])
         }
-        this.discardLogAttributesFrom = new Set()
-        if(config.discardLogAttributesFrom.length != 0){
-            this.discardLogAttributesFrom = new Set(config.discardLogAttributesFrom)
+        this.discardAttributesFrom = new Set()
+        if(config.discardAttributesFrom.length != 0){
+            this.discardAttributesFrom = new Set(config.discardAttributesFrom)
         }
     }
 
@@ -61,10 +63,10 @@ class OpentelemetryLogFormatter {
         let logMetaAttributes = {}
         let logAttributes = {}
         for (const property in rawAttributes) {
-            if (this.discardLogAttributesFrom.has(property)) {
+            if (this.discardAttributesFrom.has(property)) {
                 continue
             }
-            if (this.restrictLogAttributesTo.has(property)) {
+            if (this.restrictAttributesTo.has(property)) {
                 logAttributes[property] = rawAttributes[property]
             } else {
                 logMetaAttributes[property] = rawAttributes[property]
@@ -72,12 +74,12 @@ class OpentelemetryLogFormatter {
         }
         if (Object.keys(logMetaAttributes).length != 0) {
             logMetaAttributes = JSON.stringify(logMetaAttributes)
-            if (logMetaAttributes.length > this.logMetaCharacterLimit) {
-                logAttributes[this.logMetaCharLengthAttributeName] = logMetaAttributes.length
-                logAttributes[this.logMetaTooLargeAttributeName] = true
-                logMetaAttributes = logMetaAttributes.slice(0, this.logMetaCharacterLimit)
+            if (logMetaAttributes.length > this.metaCharacterLimit) {
+                logAttributes[this.metaCharLengthAttributeName] = logMetaAttributes.length
+                logAttributes[this.metaTooLargeAttributeName] = true
+                logMetaAttributes = logMetaAttributes.slice(0, this.metaCharacterLimit)
             }
-            logAttributes[this.logMetaAttributeName] = logMetaAttributes
+            logAttributes[this.metaAttributeName] = logMetaAttributes
         }
         return logAttributes
     }
@@ -85,7 +87,7 @@ class OpentelemetryLogFormatter {
     getAttributesSimple(rawAttributes) {
         let logAttributes = {}
         for (const property in rawAttributes) {
-            if (this.discardLogAttributesFrom.has(property)) {
+            if (this.discardAttributesFrom.has(property)) {
                 continue
             }
             logAttributes[property] = rawAttributes[property]
@@ -133,11 +135,11 @@ class OpentelemetryLogFormatter {
         let rawAttributes = this.getRecordMeta(record)
         if (typeof body == "object" && !Array.isArray(body)) {
             rawAttributes = Object.assign({}, rawAttributes, body)
-            body = this.missingLogBodyMessage
-        } else if ( body.length > this.logBodyCharacterLimit) {
-            rawAttributes[this.logBodyCharLengthAttributeName] = body.length
-            rawAttributes[this.logBodyTooLargeAttributeName] = true
-            body = body.slice(0,this.logBodyCharacterLimit)
+            body = this.missingBodyMessage
+        } else if ( body.length > this.bodyCharacterLimit) {
+            rawAttributes[this.bodyCharLengthAttributeName] = body.length
+            rawAttributes[this.bodyTooLargeAttributeName] = true
+            body = body.slice(0,this.bodyCharacterLimit)
         }
         const timestamp = new Date()
         return {
