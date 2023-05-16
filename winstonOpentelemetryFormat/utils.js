@@ -1,6 +1,8 @@
 const format = require("winston").format;
 const os = require("os");
 const opentelemetryApi = require("@opentelemetry/api");
+const { SemanticResourceAttributes } = require('@opentelemetry/semantic-conventions');
+const { SDK_INFO } = require('@opentelemetry/core');
 
 const severityNumber = {
     "debug": 5,
@@ -14,9 +16,11 @@ const severityNumber = {
 class OpentelemetryLogFormatter {
 
     DefaultResourceAttributes = {
-        "telemetry.sdk.language": "nodejs",
-        "telemetry.sdk.name": "opentelemetry",
-        "telemetry.sdk.version": "1.8.0", // Todo: replace with code to fetch package version
+        [SemanticResourceAttributes.SERVICE_NAME]: process.env.OTEL_SERVICE_NAME || "unknown_service",
+        [SemanticResourceAttributes.SERVICE_INSTANCE_ID]: os.hostname(),
+        [SemanticResourceAttributes.TELEMETRY_SDK_LANGUAGE]: SDK_INFO[SemanticResourceAttributes.TELEMETRY_SDK_LANGUAGE],
+        [SemanticResourceAttributes.TELEMETRY_SDK_NAME]: SDK_INFO[SemanticResourceAttributes.TELEMETRY_SDK_NAME],
+        [SemanticResourceAttributes.TELEMETRY_SDK_VERSION]: SDK_INFO[SemanticResourceAttributes.TELEMETRY_SDK_VERSION],
     }
     missingBodyMessage = ""
     bodyTooLargeAttributeName = "_body_too_large"
@@ -28,11 +32,8 @@ class OpentelemetryLogFormatter {
 
     constructor(config) {
         this.resourceAttributes = config.resourceAttributes || {}
-        if (!this.resourceAttributes["service.name"]){
-            throw "service.name is mandatory in resourceAttributes"
-        }
         this.resourceAttributes = Object.assign({}, this.DefaultResourceAttributes, this.resourceAttributes)
-        this.useTraces = config["useTraces"]
+        this.useTraces = "useTraces" in config? config["useTraces"]: true
         this.metaCharacterLimit = config["metaCharacterLimit"]
         this.bodyCharacterLimit = config["bodyCharacterLimit"]
         if (!this.metaCharacterLimit){
@@ -49,12 +50,12 @@ class OpentelemetryLogFormatter {
         this.restrictAttributesTo.add(this.metaCharLengthAttributeName)
 
         this.GetAttributes = this.getAttributesSimple
-        if (config.restrictAttributesTo.length != 0){
+        if (config.restrictAttributesTo && config.restrictAttributesTo.length != 0){
             this.GetAttributes = this.getAttributesStructured
             this.restrictAttributesTo = new Set([...this.restrictAttributesTo, ...config.restrictAttributesTo])
         }
         this.discardAttributesFrom = new Set()
-        if(config.discardAttributesFrom.length != 0){
+        if(config.discardAttributesFrom && config.discardAttributesFrom.length != 0){
             this.discardAttributesFrom = new Set(config.discardAttributesFrom)
         }
     }
@@ -157,7 +158,7 @@ class OpentelemetryLogFormatter {
     }
 }
 
-function opentelemetryLogFormat(config) {
+function opentelemetryLogFormat(config={}) {
     const _opentelemetryLogFormat = format((info, opts) => {
         return opts.opentelemetryLogFormatterObject.format(info, opts.filename)
     });
