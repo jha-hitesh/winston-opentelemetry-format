@@ -1,8 +1,8 @@
 const format = require("winston").format;
 const os = require("os");
 const opentelemetryApi = require("@opentelemetry/api");
-const { SemanticResourceAttributes } = require('@opentelemetry/semantic-conventions');
-const { SDK_INFO } = require('@opentelemetry/core');
+const { SemanticResourceAttributes } = require("@opentelemetry/semantic-conventions");
+const { SDK_INFO } = require("@opentelemetry/core");
 
 const severityNumber = {
     "debug": 5,
@@ -121,7 +121,7 @@ class OpentelemetryLogFormatter {
     }
 
     getRecordMeta(record) {
-        const splat = record[Symbol.for('splat')];
+        const splat = record[Symbol.for("splat")];
         if (splat && splat.length) {
             return splat.length === 1 ? splat[0] : {"splat": splat};
         } else {

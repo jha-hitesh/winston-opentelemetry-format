@@ -17,17 +17,11 @@ const logger = winston.createLogger({
     level: "debug",
     format: opentelemetryLogFormat({
         "filename": __filename,
-        "useTraces": true,
         "restrictAttributesTo": [
             "key1", "key2", "key3"
         ],
-        "discardAttributesFrom": [],
         "metaCharacterLimit": 100,
         "bodyCharacterLimit": 10,
-        "resourceAttributes": {
-            "service.name": "app-main-server",  // mandatory key
-            "service.instance.id": os.hostname()  // optional key
-        }
     }),
     defaultMeta: {},
     transports: [
