@@ -1,6 +1,6 @@
 {
     "name": "winston-opentelemetry-format",
-    "version": "0.0.2",
+    "version": "0.0.3",
     "description": "a winston format to output opentelemetry logs from winston logger",
     "main": "index.js",
     "scripts": {},
